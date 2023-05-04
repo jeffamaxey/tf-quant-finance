@@ -147,19 +147,16 @@ def build(x_data: types.RealTensor,
     x_data = tf.convert_to_tensor(x_data, dtype=dtype, name='x_data')
     y_data = tf.convert_to_tensor(y_data, dtype=dtype, name='y_data')
     # Sanity check inputs
-    if validate_args:
-      assert_sanity_check = [_validate_arguments(x_data)]
-    else:
-      assert_sanity_check = []
+    assert_sanity_check = [_validate_arguments(x_data)] if validate_args else []
     x_data, y_data = tff_utils.broadcast_common_batch_shape(x_data, y_data)
 
-    if boundary_condition_type == BoundaryConditionType.FIXED_FIRST_DERIVATIVE:
-      if left_boundary_value is None or right_boundary_value is None:
-        raise ValueError(
-            'Expected non-empty left_boundary_value/right_boundary_value when '
-            'boundary_condition_type is FIXED_FIRST_DERIVATIVE, actual '
-            'left_boundary_value {0}, actual right_boundary_value {1}'.format(
-                left_boundary_value, right_boundary_value))
+    if (boundary_condition_type == BoundaryConditionType.FIXED_FIRST_DERIVATIVE
+        and (left_boundary_value is None or right_boundary_value is None)):
+      raise ValueError(
+          'Expected non-empty left_boundary_value/right_boundary_value when '
+          'boundary_condition_type is FIXED_FIRST_DERIVATIVE, actual '
+          'left_boundary_value {0}, actual right_boundary_value {1}'.format(
+              left_boundary_value, right_boundary_value))
     with tf.compat.v1.control_dependencies(assert_sanity_check):
       spline_coeffs = _calculate_spline_coeffs(x_data, y_data,
                                                boundary_condition_type,
@@ -357,9 +354,7 @@ def _calculate_spline_coeffs_clamped_or_first_derivative(
   rhs = tf.where(right_boundary, bottom_rhs, rhs)
   rhs = tf.where(tf.equal(dd_left, 0), zero, rhs)
 
-  spline_coeffs = tf.linalg.tridiagonal_solve(
-      diagonals, rhs, partial_pivoting=False)
-  return spline_coeffs
+  return tf.linalg.tridiagonal_solve(diagonals, rhs, partial_pivoting=False)
 
 
 def _calculate_spline_coeffs(

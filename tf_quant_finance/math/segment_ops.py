@@ -112,14 +112,8 @@ def segment_diff(x,
     # If exclusive is False, then needs_fix means we need to replace the values
     # in raw_diffs at those locations with the values in x.
     needs_fix = tf.cast(needs_fix, dtype=tf.bool)
-    if not exclusive:
-      return tf.where(needs_fix, x, raw_diffs)
-
-    # If exclusive is True, we have to be more careful. The raw_diffs
-    # computation has removed the first 'order' elements. After removing the
-    # corresponding elements from needs_fix, we use it to remove the elements
-    # from raw_diffs.
-    return tf.boolean_mask(raw_diffs, tf.logical_not(needs_fix[order:]))
+    return (tf.boolean_mask(raw_diffs, tf.logical_not(needs_fix[order:]))
+            if exclusive else tf.where(needs_fix, x, raw_diffs))
 
 
 def segment_cumsum(x, segment_ids, exclusive=False, dtype=None, name=None):

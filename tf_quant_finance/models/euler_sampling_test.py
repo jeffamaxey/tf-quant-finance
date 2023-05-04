@@ -81,10 +81,7 @@ class EulerSamplingTest(tf.test.TestCase, parameterized.TestCase):
 
     times = np.array([0.1, 0.2, 0.3])
     num_samples = 10000
-    if watch_params:
-      watch_params = []
-    else:
-      watch_params = None
+    watch_params = [] if watch_params else None
     if use_time_step:
       time_step = 0.01
       num_time_steps = None
@@ -232,10 +229,9 @@ class EulerSamplingTest(tf.test.TestCase, parameterized.TestCase):
 
     def vol_fn(t, x):
       del x
-      if not use_batch:
-        return (a * t + b) * tf.ones([1, 1], dtype=t.dtype)
-      else:
-        return (a * t + b) * tf.ones([2, 1, 1, 1], dtype=t.dtype)
+      return ((a * t + b) *
+              tf.ones([2, 1, 1, 1], dtype=t.dtype) if use_batch else
+              (a * t + b) * tf.ones([1, 1], dtype=t.dtype))
 
     times = np.array([0.0, 0.1, 0.21, 0.32, 0.43, 0.55])
     num_samples = 10000
@@ -250,11 +246,7 @@ class EulerSamplingTest(tf.test.TestCase, parameterized.TestCase):
     else:
       normal_draws = None
 
-    if use_batch:
-      # x0.shape = [2, 1, 1]
-      x0 = np.array([[[0.1]], [[0.1]]])
-    else:
-      x0 = np.array([0.1])
+    x0 = np.array([[[0.1]], [[0.1]]]) if use_batch else np.array([0.1])
     paths = self.evaluate(
         euler_sampling.sample(
             dim=1,
@@ -282,10 +274,8 @@ class EulerSamplingTest(tf.test.TestCase, parameterized.TestCase):
         self.assertAllClose(paths.shape, (num_samples, 6, 1), atol=0)
       else:
         self.assertAllClose(paths.shape, (2, num_samples, 6, 1), atol=0)
-    if not use_batch:
-      means = np.mean(paths, axis=0).reshape(-1)
-    else:
-      means = np.mean(paths, axis=1).reshape([2, 1, 6])
+    means = (np.mean(paths, axis=1).reshape([2, 1, 6])
+             if use_batch else np.mean(paths, axis=0).reshape(-1))
     expected_means = x0 + (2.0 / 3.0) * mu * np.power(times, 1.5)
     with self.subTest('ExpectedResult'):
       self.assertAllClose(means, expected_means, rtol=1e-2, atol=1e-2)
@@ -393,10 +383,8 @@ class EulerSamplingTest(tf.test.TestCase, parameterized.TestCase):
       def vol_fn(t, x):
         del x
         return (a * t + b) * tf.ones([2, 2], dtype=t.dtype)
-      if watch_params:
-        watch_params_tf = [a, b]
-      else:
-        watch_params_tf = None
+
+      watch_params_tf = [a, b] if watch_params else None
       return euler_sampling.sample(
           dim=2,
           drift_fn=drift_fn, volatility_fn=vol_fn,

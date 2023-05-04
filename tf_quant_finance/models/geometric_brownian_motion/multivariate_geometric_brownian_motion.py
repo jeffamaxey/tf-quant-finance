@@ -201,7 +201,7 @@ class MultivariateGeometricBrownianMotion(ito_process.ItoProcess):
     Raises:
       ValueError: If `normal_draws` is supplied and `dim` is mismatched.
     """
-    name = name or (self._name + "_sample_path")
+    name = name or f"{self._name}_sample_path"
     with tf.name_scope(name):
       times = tf.convert_to_tensor(times, self._dtype, name="times")
       if normal_draws is not None:
@@ -277,8 +277,7 @@ class MultivariateGeometricBrownianMotion(ito_process.ItoProcess):
     cumsum = tf.linalg.matvec(lower_triangular,
                               tf.transpose(log_increments))
     cumsum = tf.transpose(cumsum, [1, 2, 0])
-    samples = initial_state * tf.math.exp(cumsum)
-    return samples
+    return initial_state * tf.math.exp(cumsum)
 
   def fd_solver_backward(self,
                          start_time,
@@ -669,9 +668,8 @@ def _backward_pde_coeffs(drift_fn, volatility_fn, discounting):
     return mu
 
   def zeroth_order_coeff_fn(t, coord_grid):
-    if not discounting:
-      return None
-    return -discounting(t, _coord_grid_to_mesh_grid(coord_grid))
+    return (-discounting(t, _coord_grid_to_mesh_grid(coord_grid))
+            if discounting else None)
 
   return second_order_coeff_fn, first_order_coeff_fn, zeroth_order_coeff_fn
 

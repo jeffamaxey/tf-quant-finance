@@ -212,7 +212,7 @@ class GeometricBrownianMotion(ito_process.ItoProcess):
       ValueError: If `normal_draws` is supplied and does not have shape
       broadcastable to `[num_samples, num_time_points, 1]`.
     """
-    name = name or (self._name + '_sample_path')
+    name = name or f'{self._name}_sample_path'
 
     with tf.name_scope(name):
       times = tf.convert_to_tensor(times, self._dtype)
@@ -329,13 +329,12 @@ class GeometricBrownianMotion(ito_process.ItoProcess):
         Default value: `None` which maps to the default name
         '_volatility_squared'.
     """
-    name = name or (self._name + '_volatility_squared')
     if volatility_is_constant:
       return volatility ** 2
-    else:
-      return pw.PiecewiseConstantFunc(
-          volatility.jump_locations(), volatility.values()**2,
-          dtype=dtype, name=name)
+    name = name or f'{self._name}_volatility_squared'
+    return pw.PiecewiseConstantFunc(
+        volatility.jump_locations(), volatility.values()**2,
+        dtype=dtype, name=name)
 
   # TODO(b/152967694): Remove the duplicate methods.
   def fd_solver_backward(self,
@@ -694,9 +693,8 @@ def _backward_pde_coeffs(drift_fn, volatility_fn, discounting):
     return mean
 
   def zeroth_order_coeff_fn(t, coord_grid):
-    if not discounting:
-      return None
-    return -discounting(t, _coord_grid_to_mesh_grid(coord_grid))
+    return (-discounting(t, _coord_grid_to_mesh_grid(coord_grid))
+            if discounting else None)
 
   return second_order_coeff_fn, first_order_coeff_fn, zeroth_order_coeff_fn
 

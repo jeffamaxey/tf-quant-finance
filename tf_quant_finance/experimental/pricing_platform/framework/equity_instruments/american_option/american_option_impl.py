@@ -173,12 +173,12 @@ class AmericanOption(instrument.Instrument):
       # Get discount and reference curves
       self._currency = cashflow_streams.to_list(currency)
       self._equity = cashflow_streams.to_list(equity)
-      if len(self._currency) != len(self._equity):
-        if len(self._currency) > 1 and len(self._equity) > 1:
-          raise ValueError(
-              "Number of currencies and equities should be the same "
-              "but it is {0} and {1}".format(len(self._currency),
-                                             len(self._equity)))
+      if (len(self._currency) != len(self._equity) and len(self._currency) > 1
+          and len(self._equity) > 1):
+        raise ValueError(
+            "Number of currencies and equities should be the same "
+            "but it is {0} and {1}".format(len(self._currency),
+                                           len(self._equity)))
 
       config = _process_config(config)
       [
@@ -254,11 +254,7 @@ class AmericanOption(instrument.Instrument):
       config: AmericanOptionConfig = None
       ) -> List["AmericanOption"]:
     proto_dict = proto_utils.from_protos(proto_list, config)
-    instruments = []
-    for kwargs in proto_dict.values():
-      # Create an instrument
-      instruments.append(cls(**kwargs))
-    return instruments
+    return [cls(**kwargs) for kwargs in proto_dict.values()]
 
   @classmethod
   def group_protos(
@@ -282,7 +278,7 @@ class AmericanOption(instrument.Instrument):
       A `Tensor` of shape `batch_shape`  containing the modeled price of each
       American option contract based on the input market data.
     """
-    name = name or (self._name + "_price")
+    name = name or f"{self._name}_price"
     with tf.name_scope(name):
       discount_curve = cashflow_streams.get_discount_curve(
           self._discount_curve_type, market, self._discount_curve_mask)
@@ -317,8 +313,7 @@ class AmericanOption(instrument.Instrument):
             seed=self._seed)
         return self._short_position * self._contract_amount * prices
       else:
-        raise ValueError("Only BS-LSM model is supported. "
-                         "Supplied {}".format(self._model))
+        raise ValueError(f"Only BS-LSM model is supported. Supplied {self._model}")
 
   @property
   def batch_shape(self) -> tf.Tensor:
@@ -369,7 +364,7 @@ def _process_config(
   num_exercise_times = config.get("num_exercise_times", 100)
   num_samples = config.get("num_samples", 96000)
   num_calibration_samples = config.get("num_calibration_samples", None)
-  discounting_curve = config.get("discounting_curve", dict())
+  discounting_curve = config.get("discounting_curve", {})
   return AmericanOptionConfig(discounting_curve=discounting_curve,
                               model=model,
                               seed=seed,
